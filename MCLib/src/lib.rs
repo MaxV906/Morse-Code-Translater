@@ -1,5 +1,4 @@
 // TO DO:
-// Implement binary tree for morse code to ascii
 // Implement morse code to ascii function in the Morse Translater
 // Implement tests for morse to ascii translation
 
