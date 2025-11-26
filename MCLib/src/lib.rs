@@ -151,13 +151,9 @@ impl Morse {
 
         }
 
-        //translation.truncate(translation.trim_end().len());
-
-        let _ = translation.pop();
-
-        println!("{}", translation);
+        translation.truncate(translation.trim_end().len()); // Removes all the space characters at the end of the translation string
        
-        return Ok(translation);
+        return Ok(translation); // Returns the translation string as a result
         
     }
 
