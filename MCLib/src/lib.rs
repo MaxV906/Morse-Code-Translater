@@ -3,47 +3,67 @@
 // Implement morse code to ascii function in the Morse Translater
 // Implement tests for morse to ascii translation
 
-pub mod Binary_Tree {
-    
-    pub struct Node {
-        pub value: Option<char>,
-        pub left: Option<Box<Node>>,
-        pub right: Option<Box<Node>>
+
+enum Direction {
+    Left,
+    Right
+}
+
+struct Node {
+    value: Option<char>,
+    left: Option<Box<Node>>,
+    right: Option<Box<Node>>
+}
+
+impl Node {
+
+    // Binary tree node constructor
+    fn new(value: Option<char>) -> Node {
+        Node {
+            value,
+            left: None,
+            right: None
+        }
     }
 
-    impl Node {
+    // This function inserts values and creates new nodes on the left/right branch. It will help implement the binary tree for morse code translation easier.
+    fn insert(&mut self, value: Option<char>, mut directions: Vec<Direction>) {
 
-        pub fn new(value: Option<char>) -> Node {
-            Node {
-                value,
-                left: None,
-                right: None
+        if directions.is_empty() { // Checks if the direction vector is empty
+            self.value = value; // Inserts the value
+            return // Exits the function
+        }
+
+        let d = directions.remove(0); // Removes the first direction in the vector and stores it
+
+        match d {
+            Direction::Left => { // Checks if the removed direction is left
+                if self.left.is_none() { // Checks if left node exists.
+                    self.left = Some(Box::new(Node::new(None))); // If it isn't, it creates a node
+                    self.left.as_mut().unwrap().value = value; // And stores a value in it
+                    return // Exists the function
+                }
+
+                self.left.as_mut().unwrap().insert(value, directions); // If it does, it passes the value and direction onto the next left Node
+            },
+
+            Direction::Right => { // Does the same thing, just for the right node
+                if self.right.is_none() {
+                    self.right = Some(Box::new(Node::new(None)));
+                    self.right.as_mut().unwrap().value = value;
+                    return
+                }
+
+                self.right.as_mut().unwrap().insert(value, directions);
             }
         }
 
-        pub fn insert_left(&mut self, value: Option<char>) {
 
-            if self.left.is_some() {
-                return
-            }
-            
-            self.left = Some(Box::new(Node::new(value)));
-            
-        }
-
-        pub fn insert_right(&mut self, value: Option<char>) {
-
-            if self.right.is_some() {
-                return
-            }
-            
-            self.right = Some(Box::new(Node::new(value)));
-            
-        }
-        
     }
+
 
 }
+
 
 pub enum Translation {
     ASCII,
@@ -57,8 +77,8 @@ pub enum Error {
 
 pub struct Morse {
     code: Vec<String>,
-    tree: crate::Binary_Tree::Node,
-    message: Option<String>
+    tree: Node,
+    message: String
 }
 
 impl Morse {
@@ -68,8 +88,8 @@ impl Morse {
 
         Morse {
             code: Morse::make_vector(), // Inserts ascii to code vector
-            tree: crate::Binary_Tree::Node::new(None), // Temporarily makes a empty binary tree node
-            message: None // Sets the message to none
+            tree: Morse::make_binary_tree(), // Temporarily makes a empty binary tree node
+            message: String::new() // Sets an empty string as a message
         }
 
     }
@@ -77,7 +97,10 @@ impl Morse {
     // Sets the message for translation
     pub fn set_message(&mut self, message: &str) {
 
-        self.message = Some(String::from(message));
+        if !self.message.is_empty() {
+            self.message.clear();
+        }
+        self.message = String::from(message);
 
     }
 
@@ -86,9 +109,11 @@ impl Morse {
 
         match translation {
             Translation::ASCII => {
-                return self.translate_to_code(); // Result from ascii to code translation
+                return Ok("Test".to_string()); // Will be implemented properly later
             },
-            Translation::CODE => {return Ok("Test".to_string())}, // Will be implemented properly later
+            Translation::CODE => {
+                return self.translate_to_code(); // Result from ascii to code translation
+            } 
         }
 
     }
@@ -96,76 +121,90 @@ impl Morse {
     // Translates ascii to code
     fn translate_to_code(&self) -> Result<String, Error> {
 
-        if self.message.is_none() {
-            return Err(Error::MessageNotSet);
+        if self.message.is_empty() { // Checks if message is set
+            return Err(Error::MessageNotSet); // If it's not, returns Error (MessageNotSet)
         }
         
-        let binding = self.message.as_ref().unwrap().clone().to_uppercase();
-        let message = binding.chars();
-        let mut translation: String = String::new();
+        let binding = self.message.clone().to_uppercase(); // Clones the message and makes it uppercase so it doesn't affect the original message
+        let message = binding.chars(); // Turns it into an array of characters
+        let mut translation: String = String::new(); // Sets up a new string that will hold the translated message
 
-        for c in message {
+        for c in message { // For every character in the message
 
-            let c_code = c as usize;
-            let i = c_code - 65;
+            let c_code = c as usize; // Converts the character into it's ascii code
 
-            if c.is_alphabetic() {
-                translation.push_str(format!("{} ", self.code[i]).as_str());
-                continue;
-            }
+            if c.is_whitespace() { // Checks if the character is whitespace
+                if c == ' ' { // Checks if it's a space character
 
-            if c.is_whitespace() {
-                if c != ' ' {
-                    return Err(Error::NotValidChar)
+                    translation.push_str("  "); // If it is, it pushes 2 space characters to seperate the words
+                    continue; // Starts the loop again
                 }
-
-                translation.push_str("   ");
-                continue;
             }
 
-            return Err(Error::NotValidChar);
+            let i = c_code - 65; // Subtracts 65 from the code because 65 is ascii code for the character 'A'. That gives us the index that we can use in the Morse Code Vector generated by make_vector() function
+
+            if i <= 90 { // Checks if the character is in range from A-Z
+                translation.push_str(format!("{} ", self.code[i]).as_str()); // Pushes the morse code equivelent of the character and a space character to seperate letters
+                continue; // Starts the loop again
+            }
+
+            return Err(Error::NotValidChar); // If all else fails, returns NotValidChar error
 
         }
+
+        //translation.truncate(translation.trim_end().len());
 
         let _ = translation.pop();
-        
+
+        println!("{}", translation);
+       
         return Ok(translation);
         
     }
 
+    // Creates a vector containing morse code for each character
+
     fn make_vector() -> Vec<String> {
 
-        // Creates a vector containing morse code for each character
-
         return vec![
-            String::from(".-"),
-            String::from("-..."),
-            String::from("-.-."),
-            String::from("-.."),
-            String::from("."),
-            String::from("..-."),
-            String::from("--."),
-            String::from("...."),
-            String::from(".."),
-            String::from(".---"),
-            String::from("-.-"),
-            String::from(".-.."),
-            String::from("--"),
-            String::from("-."),
-            String::from("---"),
-            String::from(".--."),
-            String::from("--.-"),
-            String::from(".-."),
-            String::from("..."),
-            String::from("-"),
-            String::from("..-"),
-            String::from("...-"),
-            String::from(".--"),
-            String::from("-..-"),
-            String::from("-.--"),
-            String::from("--..")
+            String::from(".-"), // A
+            String::from("-..."), // B
+            String::from("-.-."), // C
+            String::from("-.."), // D
+            String::from("."), // E
+            String::from("..-."), // F
+            String::from("--."), // G
+            String::from("...."), // H
+            String::from(".."), // I
+            String::from(".---"), // J
+            String::from("-.-"), // K
+            String::from(".-.."), // L
+            String::from("--"), // M
+            String::from("-."), // N
+            String::from("---"), // O
+            String::from(".--."), // P
+            String::from("--.-"), // Q
+            String::from(".-."), // R
+            String::from("..."), // S
+            String::from("-"), // T
+            String::from("..-"), // U
+            String::from("...-"), // V
+            String::from(".--"), // W
+            String::from("-..-"), // X
+            String::from("-.--"), // Y
+            String::from("--..") // Z
         ];
 
+    }
+
+    // Creates a binary tree
+    fn make_binary_tree() -> Node {
+        let mut root = Node::new(None);
+
+        root.insert(Some('E'), vec![Direction::Left]);
+        root.insert(Some('T'), vec![Direction::Right]);
+
+        return root;
     }
  
 }
@@ -179,7 +218,7 @@ mod tests {
         let mut mst: Morse = Morse::new();
         mst.set_message("SOS");
 
-        match mst.translate(Translation::ASCII) {
+        match mst.translate(Translation::CODE) {
             Ok(res) => {
                 assert_eq!(res, String::from("... --- ..."));
             },
@@ -188,6 +227,34 @@ mod tests {
                 assert!(false);
             }
         }
+
+        mst.set_message("S O S");
+
+        match mst.translate(Translation::CODE) {
+            Ok(res) => {
+                assert_eq!(res, String::from("...   ---   ..."));
+            },
+
+            Err(_) => {
+                assert!(false);
+            }
+        }
+    }
+
+    #[test]
+    fn binary_tree_test() {
+        let mut mst: Morse = Morse::new();
+
+        if let Some(c) = mst.tree.left.unwrap().value {
+            assert_eq!(c, 'E');
+        }
+
+        if let Some(c) = mst.tree.right.unwrap().value {
+            assert_eq!(c, 'T');
+            return
+        }
+
+        assert!(false);
     }
     
 }
